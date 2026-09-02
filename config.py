@@ -1,5 +1,5 @@
 """
-配置文件 - 所有应用配置集中管理
+配置文件 - 所有应用配置集中管理（已扩展 Deepseek 配置）
 """
 import os
 from dotenv import load_dotenv
@@ -9,10 +9,11 @@ load_dotenv()
 # ============ API 配置 ============
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-key")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "your-claude-key")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "your-deepseek-key")
 LOCAL_MODEL_URL = os.getenv("LOCAL_MODEL_URL", "http://localhost:11434")
 
 # ============ AI 模型选择 ============
-# 可选: "openai", "claude", "local"
+# 可选: "openai", "claude", "local", "deepseek"
 AI_MODEL = os.getenv("AI_MODEL", "openai")
 
 # 模型参数
@@ -31,6 +32,14 @@ MODEL_CONFIG = {
         "model": "llama2",
         "temperature": 0.7,
         "num_predict": 2000,
+    },
+    # Deepseek - OpenAI 兼容 API 的示例配置
+    "deepseek": {
+        # 请使用 Deepseek 提供的 API base URL，例如: "https://api.deepseek.example/v1"
+        "api_base": os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.example/v1"),
+        "model": os.getenv("DEEPSEEK_MODEL", "deepseek-1.0"),
+        "temperature": float(os.getenv("DEEPSEEK_TEMPERATURE", "0.7")),
+        "max_tokens": int(os.getenv("DEEPSEEK_MAX_TOKENS", "2000")),
     }
 }
 
