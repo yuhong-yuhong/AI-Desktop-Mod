@@ -1,5 +1,6 @@
 """
 Deepseek AI客户端 - 简化版本，仅保留Deepseek支持
+支持动态传入 API Key
 """
 import json
 import urllib.request
@@ -49,28 +50,39 @@ def _parse_deepseek_response(raw: str) -> str:
         return raw.strip()
 
 
-def get_response(user_text: str, history: list) -> str:
+def get_response(user_text: str, history: list, api_key: str = None) -> str:
     """
     调用Deepseek API获取响应
+    
+    🔑 ████████ API 需求 ████████
+       需要 Deepseek API Key
+       访问: https://platform.deepseek.com 获取 API Key
     
     Args:
         user_text: 用户输入文本
         history: 消息历史（OpenAI格式）
+        api_key: (可选) Deepseek API Key
     
     Returns:
         AI的响应文本
     """
     try:
-        api_key = config.DEEPSEEK_API_KEY
+        # 使用传入的 API Key 或读取 config 中的配置
+        if api_key:
+            api_key_to_use = api_key
+        else:
+            api_key_to_use = config.DEEPSEEK_API_KEY
+        
         api_url = config.DEEPSEEK_API_URL
         
-        # 验证配置
-        if not api_key or api_key.startswith('your-'):
-            logger.warning("Deepseek API Key未配置")
+        # ████████ 验证 API Key ████████
+        if not api_key_to_use or api_key_to_use.startswith('sk-') and len(api_key_to_use) <= 5:
+            logger.warning("❌ Deepseek API Key 未配置或无效")
+            logger.warning("请在 config.py 中设置 DEEPSEEK_API_KEY")
             return _mock_reply(user_text)
         
         if not api_url:
-            logger.warning("Deepseek API URL未配置")
+            logger.warning("❌ Deepseek API URL 未配置")
             return _mock_reply(user_text)
         
         # 准备消息历史 - 限制数量以控制token消耗
@@ -92,23 +104,23 @@ def get_response(user_text: str, history: list) -> str:
             "stream": False
         }
         
-        # 请求头
+        # ████████ 发送 API 请求 ████████
         headers = {
-            "Authorization": f"Bearer {api_key}"
+            "Authorization": f"Bearer {api_key_to_use}"
         }
         
-        # 发送请求
         code, response_raw = _call_http_json(api_url, payload, headers=headers, timeout=60)
         
         # 处理响应
         if 200 <= code < 300:
             response_text = _parse_deepseek_response(response_raw)
-            logger.info("成功获取Deepseek响应")
+            logger.info("✅ 成功获取 Deepseek 响应")
             return response_text if response_text else _mock_reply(user_text)
         else:
-            logger.error(f"Deepseek API错误 - 状态码: {code}, 响应: {response_raw}")
+            logger.error(f"❌ API 错误 - 状态码: {code}")
+            logger.error(f"响应: {response_raw}")
             return _mock_reply(user_text)
     
     except Exception as e:
-        logger.error(f"调用Deepseek API异常: {e}")
+        logger.error(f"❌ API 调用异常: {e}")
         return _mock_reply(user_text)
