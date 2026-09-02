@@ -10,9 +10,12 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-key")
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "your-claude-key")
 LOCAL_MODEL_URL = os.getenv("LOCAL_MODEL_URL", "http://localhost:11434")
+# Deepseek 外部服务地址与可选的 API Key
+DEEPSEEK_URL = os.getenv("DEEPSEEK_URL", "")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 
 # ============ AI 模型选择 ============
-# 可选: "openai", "claude", "local"
+# 可选: "openai", "claude", "local", "deepseek"
 AI_MODEL = os.getenv("AI_MODEL", "openai")
 
 # 模型参数
@@ -29,6 +32,11 @@ MODEL_CONFIG = {
     },
     "local": {
         "model": "llama2",
+        "temperature": 0.7,
+        "num_predict": 2000,
+    },
+    # deepseek 可复用 local 的 num_predict，或在此添加 deepseek 专属配置
+    "deepseek": {
         "temperature": 0.7,
         "num_predict": 2000,
     }
