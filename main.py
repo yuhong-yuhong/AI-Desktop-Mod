@@ -1,10 +1,13 @@
 """AI Desktop Chat - Deepseek集成版本
 
 这个文件启动一个简单的Tkinter聊天窗口，通过ai_client与Deepseek AI进行交互。
-使用config.py进行配置管理。
+
+████████ API 需求 ████████
+在 config.py 中配置 Deepseek API Key
+访问: https://platform.deepseek.com 获取
 """
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, messagebox
 import threading
 import config
 import ai_client
@@ -15,6 +18,19 @@ class ChatApp:
         self.root = root
         root.title(config.WINDOW_TITLE)
         root.geometry(f"{config.WINDOW_WIDTH}x{config.WINDOW_HEIGHT}")
+
+        # 顶部配置提示
+        top_frame = tk.Frame(root, bg="#ffffcc", height=40)
+        top_frame.pack(fill='x', padx=0, pady=0)
+        
+        info_label = tk.Label(
+            top_frame,
+            text="⚠️ 请先在 config.py 第 21 行粘贴你的 Deepseek API Key",
+            bg="#ffffcc",
+            fg="#cc6600",
+            font=("Arial", 10, "bold")
+        )
+        info_label.pack(pady=8)
 
         # 聊天显示区
         self.chat_display = scrolledtext.ScrolledText(
@@ -53,6 +69,16 @@ class ChatApp:
 
     def on_send(self):
         """处理发送事件"""
+        # ████████ 检查 API Key 是否配置 ████████
+        if not config.DEEPSEEK_API_KEY or config.DEEPSEEK_API_KEY == "sk-":
+            messagebox.showwarning(
+                "⚠️ 警告",
+                "API Key 未配置！\n\n"
+                "请在 config.py 第 21 行粘贴你的 Deepseek API Key\n"
+                "获取地址: https://platform.deepseek.com"
+            )
+            return
+        
         user_text = self.entry.get().strip()
         if not user_text:
             return
@@ -67,6 +93,7 @@ class ChatApp:
     def call_ai(self, user_text):
         """调用AI获取响应"""
         try:
+            # ████████ 调用 API ████████
             ai_text = ai_client.get_response(user_text, self.history)
             if ai_text is None:
                 ai_text = "(没有可用的响应)"
