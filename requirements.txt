@@ -1,0 +1,3 @@
+# Minimum requirements to run the example
+python-dotenv
+openai

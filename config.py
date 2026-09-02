@@ -14,7 +14,8 @@ LOCAL_MODEL_URL = os.getenv("LOCAL_MODEL_URL", "http://localhost:11434")
 
 # ============ AI 模型选择 ============
 # 可选: "openai", "claude", "local", "deepseek"
-AI_MODEL = os.getenv("AI_MODEL", "openai")
+# 默认改为 "local"，方便在没有外部 API Key 时直接运行示例。
+AI_MODEL = os.getenv("AI_MODEL", "local")
 
 # 模型参数
 MODEL_CONFIG = {
