@@ -1,51 +1,29 @@
 """
-配置文件 - 所有应用配置集中管理
+配置文件 - Deepseek AI对话配置集中管理
 """
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ============ API 配置 ============
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "your-openai-key")
-CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY", "your-claude-key")
-LOCAL_MODEL_URL = os.getenv("LOCAL_MODEL_URL", "http://localhost:11434")
-# Deepseek 外部服务地址与可选的 API Key
-DEEPSEEK_URL = os.getenv("DEEPSEEK_URL", "")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+# ============ Deepseek API 配置 ============
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "your-deepseek-key")
+DEEPSEEK_API_URL = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
 
-# ============ AI 模型选择 ============
-# 可选: "openai", "claude", "local", "deepseek"
-AI_MODEL = os.getenv("AI_MODEL", "openai")
-
-# 模型参数
+# ============ 模型参数 ============
 MODEL_CONFIG = {
-    "openai": {
-        "model": "gpt-3.5-turbo",
-        "temperature": 0.7,
-        "max_tokens": 2000,
-    },
-    "claude": {
-        "model": "claude-3-sonnet-20240229",
-        "temperature": 0.7,
-        "max_tokens": 2000,
-    },
-    "local": {
-        "model": "llama2",
-        "temperature": 0.7,
-        "num_predict": 2000,
-    },
-    # deepseek 可复用 local 的 num_predict，或在此添加 deepseek 专属配置
     "deepseek": {
+        "model": "deepseek-chat",
         "temperature": 0.7,
-        "num_predict": 2000,
+        "max_tokens": 2000,
+        "top_p": 0.95,
     }
 }
 
 # ============ UI 配置 ============
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
-WINDOW_TITLE = "AI Desktop Chat Mod"
+WINDOW_WIDTH = 900
+WINDOW_HEIGHT = 700
+WINDOW_TITLE = "Deepseek AI Chat"
 
 # UI样式
 THEME = "light"  # "light" 或 "dark"
@@ -53,7 +31,7 @@ FONT_SIZE = 10
 FONT_FAMILY = "Arial"
 
 # ============ 对话配置 ============
-MAX_HISTORY = 100  # 保存的最大对话数
+MAX_HISTORY = 50  # 保存的最大对话对数（考虑token限制）
 STREAM_OUTPUT = True  # 是否流式输出
 AUTO_SAVE = True  # 自动保存对话
 SAVE_INTERVAL = 300  # 自动保存间隔(秒)
@@ -61,7 +39,6 @@ SAVE_INTERVAL = 300  # 自动保存间隔(秒)
 # ============ 数据路径 ============
 DATA_DIR = "./data"
 HISTORY_FILE = os.path.join(DATA_DIR, "chat_history.json")
-CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 LOG_FILE = os.path.join(DATA_DIR, "app.log")
 
 # 确保数据目录存在
@@ -72,7 +49,7 @@ LOG_LEVEL = "INFO"  # DEBUG, INFO, WARNING, ERROR
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # ============ 系统提示词 ============
-SYSTEM_PROMPT = """你是一个有帮助的AI助手。
+SYSTEM_PROMPT = """你是一个有帮助的AI助手，由Deepseek提供支持。
 - 回答用户的问题
 - 提供有用的建议
 - 保持友好和专业的语气
