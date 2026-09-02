@@ -1,10 +1,45 @@
-# 简单 AI 客户端封装，支持 openai / claude / local 回退到模拟回答
+# 简单 AI 客户端封装，支持 openai / claude /deepseek / local 回退到模拟回答
+import json
+import urllib.request
+import urllib.error
 import config
 
 
 def _mock_reply(prompt: str) -> str:
     # 非常简单的回显/模拟逻辑，便于本地运行时测试
     return f"这是模拟回答：我收到了你的消息：{prompt}"
+
+
+def _call_http_json(url: str, payload: dict, headers: dict | None = None, timeout: int = 30) -> tuple[int, str]:
+    data = json.dumps(payload).encode("utf-8")
+    hdrs = {"Content-Type": "application/json"}
+    if headers:
+        hdrs.update(headers)
+    req = urllib.request.Request(url, data=data, headers=hdrs, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.getcode(), resp.read().decode("utf-8")
+
+
+def _parse_response_text(raw: str):
+    # 尝试解析为 JSON 并抽取常见字段；否则返回原始文本
+    try:
+        j = json.loads(raw)
+    except Exception:
+        return raw.strip()
+
+    for key in ("text", "result", "response", "generated_text", "output"):
+        if key in j:
+            return j[key]
+
+    choices = j.get("choices")
+    if isinstance(choices, list) and len(choices) > 0:
+        first = choices[0]
+        if isinstance(first, dict):
+            for k in ("text", "message", "content"):
+                if k in first:
+                    return first[k]
+
+    return json.dumps(j, ensure_ascii=False)
 
 
 def get_response(user_text: str, history: list) -> str:
@@ -14,7 +49,7 @@ def get_response(user_text: str, history: list) -> str:
       - history: 消息历史，OpenAI 风格的 messages 列表
     返回: AI 文本回答
     """
-    model = config.AI_MODEL.lower()
+    model = (config.AI_MODEL or "").lower()
 
     if model == 'openai':
         try:
@@ -46,6 +81,31 @@ def get_response(user_text: str, history: list) -> str:
     if model == 'claude':
         # Claude 客户端未集成，这里回退到模拟
         return _mock_reply(user_text)
+
+    if model == 'deepseek':
+        # Deepseek: 通过 HTTP API 调用外部 Deepseek 服务（需在 .env 中配置 DEEPSEEK_URL 和可选 DEEPSEEK_API_KEY）
+        try:
+            url = getattr(config, 'DEEPSEEK_URL', '')
+            if not url:
+                return _mock_reply(user_text)
+            payload = {
+                "prompt": user_text,
+                # 如果 Deepseek 支持历史对话，可以按需发送
+                "history": history[-(config.MAX_HISTORY or 10):],
+                "max_tokens": config.MODEL_CONFIG.get('local', {}).get('num_predict', 2000),
+            }
+            headers = {}
+            key = getattr(config, 'DEEPSEEK_API_KEY', '')
+            if key:
+                headers['Authorization'] = f"Bearer {key}"
+
+            code, raw = _call_http_json(url, payload, headers=headers)
+            if code >= 200 and code < 300:
+                return _parse_response_text(raw)
+            else:
+                return _mock_reply(user_text)
+        except Exception:
+            return _mock_reply(user_text)
 
     if model == 'local':
         # 本地模型占位调用 - 若实现了本地 model，可在 ai_models 包中添加实现并导入
