@@ -37,7 +37,11 @@ def _parse_response_text(raw: str):
         if isinstance(first, dict):
             for k in ("text", "message", "content"):
                 if k in first:
-                    return first[k]
+                    val = first[k]
+                    # 如果是 dict，尝试提取 content 字段
+                    if isinstance(val, dict):
+                        return val.get("content", json.dumps(val, ensure_ascii=False))
+                    return val
 
     return json.dumps(j, ensure_ascii=False)
 
@@ -83,28 +87,46 @@ def get_response(user_text: str, history: list) -> str:
         return _mock_reply(user_text)
 
     if model == 'deepseek':
-        # Deepseek: 通过 HTTP API 调用外部 Deepseek 服务（需在 .env 中配置 DEEPSEEK_URL 和可选 DEEPSEEK_API_KEY）
+        # Deepseek: 通过 OpenAI 兼容的 HTTP API 调用 Deepseek 服务
+        # 需在 .env 中配置 DEEPSEEK_URL 和 DEEPSEEK_API_KEY
         try:
             url = getattr(config, 'DEEPSEEK_URL', '')
-            if not url:
+            api_key = getattr(config, 'DEEPSEEK_API_KEY', '')
+            
+            if not url or not api_key or api_key.startswith('your-'):
                 return _mock_reply(user_text)
+            
+            # 准备消息 - 确保格式为 OpenAI 兼容格式
+            messages = history[-(config.MAX_HISTORY or 10):]
+            msgs = []
+            for m in messages:
+                role = m.get('role')
+                content = m.get('content')
+                if role and content is not None:
+                    msgs.append({"role": role, "content": content})
+            
+            # Deepseek API 请求体（兼容 OpenAI 格式）
             payload = {
-                "prompt": user_text,
-                # 如果 Deepseek 支持历史对话，可以按需发送
-                "history": history[-(config.MAX_HISTORY or 10):],
-                "max_tokens": config.MODEL_CONFIG.get('local', {}).get('num_predict', 2000),
+                "model": "deepseek-chat",  # Deepseek 的模型名称
+                "messages": msgs,
+                "temperature": config.MODEL_CONFIG.get('deepseek', {}).get('temperature', 0.7),
+                "max_tokens": config.MODEL_CONFIG.get('deepseek', {}).get('num_predict', 2000),
+                "stream": False
             }
-            headers = {}
-            key = getattr(config, 'DEEPSEEK_API_KEY', '')
-            if key:
-                headers['Authorization'] = f"Bearer {key}"
+            
+            headers = {
+                "Authorization": f"Bearer {api_key}"
+            }
 
             code, raw = _call_http_json(url, payload, headers=headers)
             if code >= 200 and code < 300:
-                return _parse_response_text(raw)
+                response_text = _parse_response_text(raw)
+                return response_text.strip() if response_text else _mock_reply(user_text)
             else:
+                print(f"Deepseek API 返回错误码: {code}, 响应: {raw}")
                 return _mock_reply(user_text)
-        except Exception:
+        except Exception as e:
+            print(f"Deepseek 调用错误: {e}")
             return _mock_reply(user_text)
 
     if model == 'local':
